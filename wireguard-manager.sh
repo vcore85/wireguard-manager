@@ -1468,42 +1468,48 @@ else
         NEW_CLIENT_NAME="$(openssl rand -hex 25)"
       fi
       # Extract the last IPv4 address used in the WireGuard configuration file
-      LASTIPV4=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | tail --lines=1)
+      LASTIPV4=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | grep --extended-regexp '^[0-9]+$' | tail --lines=1)
       # Extract the last IPv6 address used in the WireGuard configuration file
-      LASTIPV6=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | tail --lines=1)
-      # If no IPv4 and IPv6 addresses are found in the configuration file, set the initial values to 1
-      if { [ -z "${LASTIPV4}" ] && [ -z "${LASTIPV6}" ]; }; then
+      LASTIPV6=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 --only-delimited | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | grep --extended-regexp '^[0-9]+$' | tail --lines=1)
+      # If no IPv4 or IPv6 addresses are found in the configuration file, set the initial values to 1
+      if [ -z "${LASTIPV4}" ]; then
         LASTIPV4=1
+      fi
+      if [ -z "${LASTIPV6}" ]; then
         LASTIPV6=1
       fi
       # Find the smallest used IPv4 address in the WireGuard configuration file
-      SMALLEST_USED_IPV4=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | sort --numeric-sort | head --lines=1)
+      SMALLEST_USED_IPV4=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | grep --extended-regexp '^[0-9]+$' | sort --numeric-sort | head --lines=1)
       # Find the largest used IPv4 address in the WireGuard configuration file
-      LARGEST_USED_IPV4=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | sort --numeric-sort | tail --lines=1)
+      LARGEST_USED_IPV4=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | grep --extended-regexp '^[0-9]+$' | sort --numeric-sort | tail --lines=1)
       # Create a list of used IPv4 addresses in the WireGuard configuration file
-      USED_IPV4_LIST=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | sort --numeric-sort)
+      USED_IPV4_LIST=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="/" --fields=1 | cut --delimiter="." --fields=4 | grep --extended-regexp '^[0-9]+$' | sort --numeric-sort)
       # Loop through IPv4 addresses and find an unused one
-      while [ "${SMALLEST_USED_IPV4}" -le "${LARGEST_USED_IPV4}" ]; do
-        if [[ ! ${USED_IPV4_LIST[*]} =~ ${SMALLEST_USED_IPV4} ]]; then
-          FIND_UNUSED_IPV4=${SMALLEST_USED_IPV4}
-          break
-        fi
-        SMALLEST_USED_IPV4=$((SMALLEST_USED_IPV4 + 1))
-      done
+      if { [ -n "${SMALLEST_USED_IPV4}" ] && [ -n "${LARGEST_USED_IPV4}" ]; }; then
+        while [ "${SMALLEST_USED_IPV4}" -le "${LARGEST_USED_IPV4}" ]; do
+          if [[ ! ${USED_IPV4_LIST[*]} =~ ${SMALLEST_USED_IPV4} ]]; then
+            FIND_UNUSED_IPV4=${SMALLEST_USED_IPV4}
+            break
+          fi
+          SMALLEST_USED_IPV4=$((SMALLEST_USED_IPV4 + 1))
+        done
+      fi
       # Find the smallest used IPv6 address in the WireGuard configuration file
-      SMALLEST_USED_IPV6=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | sort --numeric-sort | head --lines=1)
+      SMALLEST_USED_IPV6=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 --only-delimited | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | grep --extended-regexp '^[0-9]+$' | sort --numeric-sort | head --lines=1)
       # Find the largest used IPv6 address in the WireGuard configuration file
-      LARGEST_USED_IPV6=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | sort --numeric-sort | tail --lines=1)
+      LARGEST_USED_IPV6=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 --only-delimited | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | grep --extended-regexp '^[0-9]+$' | sort --numeric-sort | tail --lines=1)
       # Create a list of used IPv6 addresses in the WireGuard configuration file
-      USED_IPV6_LIST=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | sort --numeric-sort)
+      USED_IPV6_LIST=$(grep "AllowedIPs" ${WIREGUARD_CONFIG} | cut --delimiter=" " --fields=3 | cut --delimiter="," --fields=2 --only-delimited | cut --delimiter="/" --fields=1 | cut --delimiter=":" --fields=5 | grep --extended-regexp '^[0-9]+$' | sort --numeric-sort)
       # Loop through IPv6 addresses and find an unused one
-      while [ "${SMALLEST_USED_IPV6}" -le "${LARGEST_USED_IPV6}" ]; do
-        if [[ ! ${USED_IPV6_LIST[*]} =~ ${SMALLEST_USED_IPV6} ]]; then
-          FIND_UNUSED_IPV6=${SMALLEST_USED_IPV6}
-          break
-        fi
-        SMALLEST_USED_IPV6=$((SMALLEST_USED_IPV6 + 1))
-      done
+      if { [ -n "${SMALLEST_USED_IPV6}" ] && [ -n "${LARGEST_USED_IPV6}" ]; }; then
+        while [ "${SMALLEST_USED_IPV6}" -le "${LARGEST_USED_IPV6}" ]; do
+          if [[ ! ${USED_IPV6_LIST[*]} =~ ${SMALLEST_USED_IPV6} ]]; then
+            FIND_UNUSED_IPV6=${SMALLEST_USED_IPV6}
+            break
+          fi
+          SMALLEST_USED_IPV6=$((SMALLEST_USED_IPV6 + 1))
+        done
+      fi
       # If unused IPv4 and IPv6 addresses are found, set them as the last IPv4 and IPv6 addresses
       if { [ -n "${FIND_UNUSED_IPV4}" ] && [ -n "${FIND_UNUSED_IPV6}" ]; }; then
         LASTIPV4=$(echo "${FIND_UNUSED_IPV4}" | head --lines=1)
